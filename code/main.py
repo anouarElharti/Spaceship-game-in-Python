@@ -2,32 +2,61 @@ import pygame
 from os.path import join
 from random import randint
 
-# general setup
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self, groups):
+        super().__init__(groups)
+        self.image = pygame.image.load(join("images", "player.png")).convert_alpha()
+        self.rect = self.image.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+        self.direction = pygame.math.Vector2()
+        self.speed = 300
+        self.space_pressed = False
+
+    def update(self, delta_time):
+        keys = pygame.key.get_pressed()
+        self.direction.x = int(keys[pygame.K_RIGHT]) - int(keys[pygame.K_LEFT])
+        self.direction.y = int(keys[pygame.K_DOWN]) - int(keys[pygame.K_UP])
+        if self.direction:
+            self.direction = self.direction.normalize()
+        else:
+            self.direction = self.direction
+
+        self.rect.center += self.direction * self.speed * delta_time
+        
+
+
 pygame.init()
+
+
+# general setup
 WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 650
 display_surface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Space Invaders")
 
+
 running = True
 clock = pygame.time.Clock()
 
-# importing image
-player_surface = pygame.image.load(join("images", "player.png")).convert_alpha()
-player_rec = player_surface.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
-player_direction = pygame.math.Vector2()
-player_speed = 300  # adjust this value to change the player speed
+
+# sprite groups
+all_sprites = pygame.sprite.Group()
+player = Player(all_sprites)
+
 
 # importing the stars
 stars_surface = pygame.image.load(join("images", "star.png")).convert_alpha()
 star_positions = [(randint(0, WINDOW_WIDTH), randint(0, WINDOW_HEIGHT)) for i in range(20)]
 
+
 # importing meteor
 meteor_surface = pygame.image.load(join("images", "meteor.png")).convert_alpha()
 meteor_rec = meteor_surface.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
 
+
 # importing the laser
 laser_surface = pygame.image.load(join("images", "laser.png")).convert_alpha()
 laser_rect = laser_surface.get_rect(bottomleft = (20, WINDOW_HEIGHT - 20))
+
 
 while running:
     delta_time = clock.tick() / 1000
@@ -35,38 +64,18 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        # moving the player using inputs
-        # if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-        #     laser_rect.center = player_rec.center
-        # if event.type == pygame.MOUSEMOTION:
-        #     player_rec.center = event.pos
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and not player.space_pressed:
+                print("Strike")
+                player.space_pressed = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                player.space_pressed = False
 
-    # inputs for mooving the player
-    keys = pygame.key.get_pressed()
-    # moving the player using inputs
-    player_direction.x = int(keys[pygame.K_RIGHT]) - int(keys[pygame.K_LEFT])
-    player_direction.y = int(keys[pygame.K_DOWN]) - int(keys[pygame.K_UP])
 
-    #maintaining the speed in every direction
-    if player_direction:
-        player_direction = player_direction.normalize()
-    else:
-        player_direction = player_direction
+    all_sprites.update(delta_time)
 
-    # capturing the fire strike
-    recent_keys = pygame.key.get_just_pressed()
-    if recent_keys[pygame.K_SPACE]:
-        print("Strike")
-    # applying the player direction
-    player_rec.center += player_direction * player_speed * delta_time
-    print((player_direction * player_speed).magnitude())
 
-    # moving the player like DVD logo
-    # player_rec.center += player_direction * player_speed * delta_time
-    # if player_rec.bottom >= WINDOW_HEIGHT or player_rec.top <= 0:
-    #     player_direction.y *= -1
-    # if player_rec.right >= WINDOW_WIDTH or player_rec.left <= 0:
-    #     player_direction.x *= -1
     # drawing the game
     display_surface.fill("darkgray")
     # drawing the stars
@@ -76,12 +85,11 @@ while running:
     display_surface.blit(meteor_surface, meteor_rec)
     # drawing the laser
     display_surface.blit(laser_surface, laser_rect)
-
-    # drawing the player
-    display_surface.blit(player_surface, player_rec)
-
+    # drawing all the sprites
+    all_sprites.draw(display_surface)
     # updating the display
     pygame.display.update()
+
 
 
 pygame.quit()
